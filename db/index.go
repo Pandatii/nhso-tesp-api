@@ -70,7 +70,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 	writeJSON(w, map[string]interface{}{
 		"status": "error",
-		"error":  "เส้นทางไม่ถูกต้อง",
+		"error":  "เส้นทางไม่ถูกต้อง DB",
 	})
 }
 
