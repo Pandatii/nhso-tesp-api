@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -11,6 +12,8 @@ import (
 
 	"github.com/tealeg/xlsx"
 )
+
+const excelGitHubAuthenURL = "https://github.com/Pandatii/nhso-tesp-api/blob/fa1f940128e0998b2b8afe016657d76cda680895/api/Authen.xlsx"
 
 func Handler(w http.ResponseWriter, r *http.Request) {
 	// กำหนด CORS headers
@@ -153,7 +156,7 @@ func apiHandlerAuthen(w http.ResponseWriter, r *http.Request) {
 		// ตำแหน่งไฟล์ Excel (ต้องอยู่ใน folder api)
 		excelPath := "/var/task/api/Authen.xlsx"
 
-		jsonData, err := findJSONByPIDCol2(pid, serviceDate, excelPath)
+		jsonData, err := findJSONByPIDFromGitHub(pid, serviceDate)
 		if err == nil {
 			// ส่งข้อมูล JSON กลับไปโดยตรง
 			w.Write(jsonData)
@@ -248,6 +251,125 @@ func findJSONByPID(pid string, excelPath string) (json.RawMessage, error) {
 func findJSONByPIDCol2(pid string, serviceDate string, excelPath string) (json.RawMessage, error) {
 	// เปิดไฟล์ Excel
 	xlFile, err := xlsx.OpenFile(excelPath)
+	if err != nil {
+		return nil, fmt.Errorf("ไม่สามารถเปิดไฟล์ Excel ได้: %v", err)
+	}
+
+	// สมมติว่า sheet แรกคือที่เราต้องการ
+	if len(xlFile.Sheets) == 0 {
+		return nil, errors.New("ไม่พบ sheet ในไฟล์ Excel")
+	}
+	sheet := xlFile.Sheets[0]
+
+	// อ่านหัวข้อคอลัมน์ (สมมติว่าอยู่ในแถวแรก)
+	if len(sheet.Rows) == 0 {
+		return nil, errors.New("Excel ไม่มีข้อมูล")
+	}
+
+	jsonColumnIndex := -1        // ตำแหน่งคอลัมน์ json
+	serviceDateColumnIndex := -1 // ตำแหน่งคอลัมน์ serviceDate
+
+	// ค้นหาตำแหน่งคอลัมน์ที่ต้องการ
+	for i, cell := range sheet.Rows[0].Cells {
+		headerText := cell.String()
+		if headerText == "json" {
+			jsonColumnIndex = i
+		} else if headerText == "serviceDate serviceDate" {
+			serviceDateColumnIndex = i
+		}
+	}
+
+	if jsonColumnIndex == -1 {
+		return nil, errors.New("ไม่พบคอลัมน์ 'json' ในไฟล์ Excel")
+	}
+
+	if serviceDateColumnIndex == -1 && serviceDate != "" {
+		return nil, errors.New("ไม่พบคอลัมน์ 'serviceDate' ในไฟล์ Excel")
+	}
+
+	// ค้นหาแถวที่มีค่า PID ตรงกัน
+	for i := 1; i < len(sheet.Rows); i++ {
+		row := sheet.Rows[i]
+		if len(row.Cells) == 0 {
+			continue
+		}
+
+		// ตรวจสอบว่า PID ตรงกับที่ต้องการหรือไม่
+		rowPID := row.Cells[2].String()
+		if rowPID == pid {
+			// ถ้ามีการระบุ serviceDate ให้ตรวจสอบว่าตรงกันหรือไม่
+			if serviceDate != "" && serviceDateColumnIndex < len(row.Cells) {
+				rowServiceDate := row.Cells[serviceDateColumnIndex].String()
+				// ตัดเอาเฉพาะ 10 ตัวแรก (YYYY-MM-DD)
+				rowServiceDatePrefix := ""
+				if len(rowServiceDate) >= 10 {
+					rowServiceDatePrefix = rowServiceDate[:10]
+				} else {
+					rowServiceDatePrefix = rowServiceDate
+				}
+
+				serviceDatePrefix := ""
+				if len(serviceDate) >= 10 {
+					serviceDatePrefix = serviceDate[:10]
+				} else {
+					serviceDatePrefix = serviceDate
+				}
+
+				// ถ้า serviceDate ไม่ตรงกัน ให้ข้ามแถวนี้
+				if rowServiceDatePrefix != serviceDatePrefix {
+					continue
+				}
+			}
+
+			// ตรวจสอบว่ามีข้อมูลในคอลัมน์ json หรือไม่
+			if jsonColumnIndex < len(row.Cells) {
+				jsonStr := row.Cells[jsonColumnIndex].String()
+				if jsonStr == "" {
+					return json.RawMessage("{}"), nil
+				}
+
+				// ตรวจสอบว่าข้อมูลเป็น JSON ที่ถูกต้องหรือไม่
+				var jsonData json.RawMessage
+				if err := json.Unmarshal([]byte(jsonStr), &jsonData); err != nil {
+					return nil, fmt.Errorf("ข้อมูลในคอลัมน์ 'json' ไม่ใช่ JSON ที่ถูกต้อง: %v", err)
+				}
+
+				return jsonData, nil
+			}
+			return nil, errors.New("ไม่พบข้อมูลในคอลัมน์ 'json'")
+		}
+	}
+
+	// ถ้า serviceDate ถูกระบุแต่ไม่พบข้อมูลที่ตรงกัน
+	if serviceDate != "" {
+		return nil, fmt.Errorf("ไม่พบข้อมูลสำหรับ PID: %s และ serviceDate: %s", pid, serviceDate)
+	}
+
+	return nil, fmt.Errorf("ไม่พบข้อมูลสำหรับ PID: %s", pid)
+}
+
+// findJSONByPIDFromGitHub ค้นหาข้อมูล JSON จาก Excel บน GitHub โดยใช้ PID และ serviceDate
+func findJSONByPIDFromGitHub(pid string, serviceDate string) (json.RawMessage, error) {
+	// ดาวน์โหลดไฟล์ Excel จาก GitHub
+	resp, err := http.Get(excelGitHubAuthenURL)
+	if err != nil {
+		return nil, fmt.Errorf("ไม่สามารถดาวน์โหลดไฟล์ Excel จาก GitHub ได้: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// ตรวจสอบ status code
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("ไม่สามารถดาวน์โหลดไฟล์ Excel จาก GitHub ได้ (status code: %d)", resp.StatusCode)
+	}
+
+	// อ่านข้อมูลจาก response
+	excelBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("ไม่สามารถอ่านข้อมูลจาก response ได้: %v", err)
+	}
+
+	// เปิดไฟล์ Excel จาก bytes
+	xlFile, err := xlsx.OpenBinary(excelBytes)
 	if err != nil {
 		return nil, fmt.Errorf("ไม่สามารถเปิดไฟล์ Excel ได้: %v", err)
 	}
