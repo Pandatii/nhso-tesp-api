@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/tealeg/xlsx"
@@ -22,10 +24,42 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// เพิ่มการดีบัก path การทำงาน
+	currentDir, _ := os.Getwd()
+
+	// ลองหาไฟล์ Excel ในโฟลเดอร์ต่างๆ
+	excelPaths := []string{
+		"./data.xlsx",
+		"../data.xlsx",
+		"./api/data.xlsx",
+		filepath.Join(currentDir, "data.xlsx"),
+		filepath.Join(currentDir, "api", "data.xlsx"),
+	}
+
+	// กระบวนการทดสอบการค้นหาไฟล์
+	var filesFund []string
+	var filesNotFound []string
+	for _, path := range excelPaths {
+		if _, err := os.Stat(path); err == nil {
+			filesFund = append(filesFund, path)
+		} else {
+			filesNotFound = append(filesNotFound, path)
+		}
+	}
+
 	// ตรวจสอบเส้นทาง
-	if r.URL.Path == "/" {
-		// หน้าหลัก
-		homeHandler(w, r)
+	if r.URL.Path == "/" || r.URL.Path == "" {
+		// หน้าหลัก - รายงานผลการค้นหาไฟล์
+		response := map[string]interface{}{
+			"status":        "success",
+			"message":       "ยินดีต้อนรับสู่ API",
+			"usage":         "ลองใช้ endpoint /api?pid=P001 หรือ /api?pid=P001&serviceDate=2025-02-15",
+			"currentDir":    currentDir,
+			"excelPaths":    excelPaths,
+			"filesFound":    filesFund,
+			"filesNotFound": filesNotFound,
+		}
+		writeJSON(w, response)
 		return
 	}
 
