@@ -102,7 +102,7 @@ func apiHandlerAuthen(w http.ResponseWriter, r *http.Request) {
 
 	// ตรวจสอบค่า PID และ serviceDate
 	pid := query.Get("personalId")
-	serviceDate := query.Get("serviceDate")
+	serviceDate := query.Get("serviceDate serviceDate")
 
 	// ถ้ามีค่า PID ให้ค้นหาข้อมูลใน Excel
 	if pid != "" {
