@@ -503,28 +503,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// เพิ่มการดีบัก path การทำงาน
-	currentDir, _ := os.Getwd()
-
-	// ลองหาไฟล์ Excel ในโฟลเดอร์ต่างๆ
-	excelPaths := []string{
-		"./Authen.xlsx",
-		"../Authen.xlsx",
-		"./api/Authen.xlsx",
-		filepath.Join(currentDir, "Authen.xlsx"),
-		filepath.Join(currentDir, "api", "Authen.xlsx"),
-	}
-
-	// กระบวนการทดสอบการค้นหาไฟล์
-	var filesFund []string
-	var filesNotFound []string
-	for _, path := range excelPaths {
-		if _, err := os.Stat(path); err == nil {
-			filesFund = append(filesFund, path)
-		} else {
-			filesNotFound = append(filesNotFound, path)
-		}
-	}
+	
 
 	// ตรวจสอบเส้นทาง
 	if r.URL.Path == "/" || r.URL.Path == "" {
@@ -532,11 +511,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		response := map[string]interface{}{
 			"status":        "success",
 			"message":       "ยินดีต้อนรับสู่ API",
-			"usage":         "ลองใช้ endpoint /api?pid=P001 หรือ /api?pid=P001&serviceDate=2025-02-15",
-			"currentDir":    currentDir,
-			"excelPaths":    excelPaths,
-			"filesFound":    filesFund,
-			"filesNotFound": filesNotFound,
+			"usage":         "ลองใช้ endpoint /api?pid=P001 หรือ /api?pid=P001&serviceDate=2025-02-15"
 		}
 		writeJSON(w, response)
 		return
