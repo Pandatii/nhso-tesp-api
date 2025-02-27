@@ -10,7 +10,6 @@ import (
 	"github.com/tealeg/xlsx"
 )
 
-// Handler เป็นฟังก์ชันหลักที่จะถูกเรียกโดย Vercel
 func Handler(w http.ResponseWriter, r *http.Request) {
 	// กำหนด CORS headers
 	w.Header().Set("Access-Control-Allow-Origin", "*")
