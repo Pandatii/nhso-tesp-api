@@ -1,4 +1,4 @@
-module github.com/yourusername/go-api-excel
+module github.com/Pandatii/nhso-tesp-api
 
 go 1.20
 
