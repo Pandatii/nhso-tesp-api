@@ -2,7 +2,6 @@
   "version": 2,
   "routes": [
     { "src": "/api/(.*)", "dest": "/api" },
-    { "src": "/db/(.*)", "dest": "/db" },
-    { "src": "/(.*)", "dest": "/db" }
+    { "src": "/(.*)", "dest": "/api" }
   ]
 }
