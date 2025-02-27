@@ -154,7 +154,7 @@ func apiHandlerAuthen(w http.ResponseWriter, r *http.Request) {
 	// ถ้ามีค่า PID ให้ค้นหาข้อมูลใน Excel
 	if pid != "" {
 		// ตำแหน่งไฟล์ Excel (ต้องอยู่ใน folder api)
-		excelPath := "/var/task/api/Authen.xlsx"
+		//excelPath := "/var/task/api/Authen.xlsx"
 
 		jsonData, err := findJSONByPIDFromGitHub(pid, serviceDate)
 		if err == nil {
