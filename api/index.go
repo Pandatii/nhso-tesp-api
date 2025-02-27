@@ -29,11 +29,11 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	// ลองหาไฟล์ Excel ในโฟลเดอร์ต่างๆ
 	excelPaths := []string{
-		"./data.xlsx",
-		"../data.xlsx",
-		"./api/data.xlsx",
-		filepath.Join(currentDir, "data.xlsx"),
-		filepath.Join(currentDir, "api", "data.xlsx"),
+		"./Authen.xlsx",
+		"../Authen.xlsx",
+		"./api/Authen.xlsx",
+		filepath.Join(currentDir, "Authen.xlsx"),
+		filepath.Join(currentDir, "api", "Authen.xlsx"),
 	}
 
 	// กระบวนการทดสอบการค้นหาไฟล์
