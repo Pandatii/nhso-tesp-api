@@ -1,54 +1,53 @@
-package main
+package api
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/tealeg/xlsx"
 )
 
-// Message โครงสร้างข้อมูลสำหรับการตอบกลับ
+// Message เน�เธ�เธฃเธ�เธชเธฃเน�เธฒเธ�เธ�เน�เธญเธกเธนเธฅเธชเธณเธซเธฃเธฑเธ�เธ�เธฒเธฃเธ•เธญเธ�เธ�เธฅเธฑเธ�
 type Message struct {
 	Status    string    `json:"status"`
 	Message   string    `json:"message"`
 	Timestamp time.Time `json:"timestamp"`
 }
 
-// ExcelData โครงสร้างข้อมูลสำหรับข้อมูลที่ได้จาก Excel
+// ExcelData เน�เธ�เธฃเธ�เธชเธฃเน�เธฒเธ�เธ�เน�เธญเธกเธนเธฅเธชเธณเธซเธฃเธฑเธ�เธ�เน�เธญเธกเธนเธฅเธ—เธตเน�เน�เธ”เน�เธ�เธฒเธ� Excel
 type ExcelData struct {
 	PID        string            `json:"pid"`
 	Fields     map[string]string `json:"fields"`
 	JsonString string            `json:"json,omitempty"`
 }
 
-// findJSONByPID ค้นหาข้อมูล JSON จาก Excel โดยใช้ PID
+// findJSONByPID เธ�เน�เธ�เธซเธฒเธ�เน�เธญเธกเธนเธฅ JSON เธ�เธฒเธ� Excel เน�เธ”เธขเน�เธ�เน� PID
 func findJSONByPIDCol3(pid string, excelPath string, serviceDate string) (json.RawMessage, error) {
-	// เปิดไฟล์ Excel
+	// เน€เธ�เธดเธ”เน�เธ�เธฅเน� Excel
 	xlFile, err := xlsx.OpenFile(excelPath)
 	if err != nil {
-		return nil, fmt.Errorf("ไม่สามารถเปิดไฟล์ Excel ได้: %v", err)
+		return nil, fmt.Errorf("เน�เธกเน�เธชเธฒเธกเธฒเธฃเธ–เน€เธ�เธดเธ”เน�เธ�เธฅเน� Excel เน�เธ”เน�: %v", err)
 	}
 
-	// สมมติว่า sheet แรกคือที่เราต้องการ
+	// เธชเธกเธกเธ•เธดเธงเน�เธฒ sheet เน�เธฃเธ�เธ�เธทเธญเธ—เธตเน�เน€เธฃเธฒเธ•เน�เธญเธ�เธ�เธฒเธฃ
 	if len(xlFile.Sheets) == 0 {
-		return nil, errors.New("ไม่พบ sheet ในไฟล์ Excel")
+		return nil, errors.New("เน�เธกเน�เธ�เธ� sheet เน�เธ�เน�เธ�เธฅเน� Excel")
 	}
 	sheet := xlFile.Sheets[0]
 
-	// อ่านหัวข้อคอลัมน์ (สมมติว่าอยู่ในแถวแรก)
+	// เธญเน�เธฒเธ�เธซเธฑเธงเธ�เน�เธญเธ�เธญเธฅเธฑเธกเธ�เน� (เธชเธกเธกเธ•เธดเธงเน�เธฒเธญเธขเธนเน�เน�เธ�เน�เธ–เธงเน�เธฃเธ�)
 	if len(sheet.Rows) == 0 {
-		return nil, errors.New("Excel ไม่มีข้อมูล")
+		return nil, errors.New("Excel เน�เธกเน�เธกเธตเธ�เน�เธญเธกเธนเธฅ")
 	}
 
-	jsonColumnIndex := -1        // ตำแหน่งคอลัมน์ json
-	serviceDateColumnIndex := -1 // ตำแหน่งคอลัมน์ serviceDate
+	jsonColumnIndex := -1        // เธ•เธณเน�เธซเธ�เน�เธ�เธ�เธญเธฅเธฑเธกเธ�เน� json
+	serviceDateColumnIndex := -1 // เธ•เธณเน�เธซเธ�เน�เธ�เธ�เธญเธฅเธฑเธกเธ�เน� serviceDate
 
-	// ค้นหาตำแหน่งคอลัมน์ที่ต้องการ
+	// เธ�เน�เธ�เธซเธฒเธ•เธณเน�เธซเธ�เน�เธ�เธ�เธญเธฅเธฑเธกเธ�เน�เธ—เธตเน�เธ•เน�เธญเธ�เธ�เธฒเธฃ
 	for i, cell := range sheet.Rows[0].Cells {
 		headerText := cell.String()
 		if headerText == "json" {
@@ -59,27 +58,27 @@ func findJSONByPIDCol3(pid string, excelPath string, serviceDate string) (json.R
 	}
 
 	if jsonColumnIndex == -1 {
-		return nil, errors.New("ไม่พบคอลัมน์ 'json' ในไฟล์ Excel")
+		return nil, errors.New("เน�เธกเน�เธ�เธ�เธ�เธญเธฅเธฑเธกเธ�เน� 'json' เน�เธ�เน�เธ�เธฅเน� Excel")
 	}
 
 	if serviceDateColumnIndex == -1 && serviceDate != "" {
-		return nil, errors.New("ไม่พบคอลัมน์ 'serviceDate' ในไฟล์ Excel")
+		return nil, errors.New("เน�เธกเน�เธ�เธ�เธ�เธญเธฅเธฑเธกเธ�เน� 'serviceDate' เน�เธ�เน�เธ�เธฅเน� Excel")
 	}
 
-	// ค้นหาแถวที่มีค่า PID ตรงกัน
+	// เธ�เน�เธ�เธซเธฒเน�เธ–เธงเธ—เธตเน�เธกเธตเธ�เน�เธฒ PID เธ•เธฃเธ�เธ�เธฑเธ�
 	for i := 1; i < len(sheet.Rows); i++ {
 		row := sheet.Rows[i]
 		if len(row.Cells) == 0 {
 			continue
 		}
 
-		// ตรวจสอบว่า PID ตรงกับที่ต้องการหรือไม่
+		// เธ•เธฃเธงเธ�เธชเธญเธ�เธงเน�เธฒ PID เธ•เธฃเธ�เธ�เธฑเธ�เธ—เธตเน�เธ•เน�เธญเธ�เธ�เธฒเธฃเธซเธฃเธทเธญเน�เธกเน�
 		rowPID := row.Cells[2].String()
 		if rowPID == pid {
-			// ถ้ามีการระบุ serviceDate ให้ตรวจสอบว่าตรงกันหรือไม่
+			// เธ–เน�เธฒเธกเธตเธ�เธฒเธฃเธฃเธฐเธ�เธธ serviceDate เน�เธซเน�เธ•เธฃเธงเธ�เธชเธญเธ�เธงเน�เธฒเธ•เธฃเธ�เธ�เธฑเธ�เธซเธฃเธทเธญเน�เธกเน�
 			if serviceDate != "" && serviceDateColumnIndex < len(row.Cells) {
 				rowServiceDate := row.Cells[serviceDateColumnIndex].String()
-				// ตัดเอาเฉพาะ 10 ตัวแรก (YYYY-MM-DD)
+				// เธ•เธฑเธ”เน€เธญเธฒเน€เธ�เธ�เธฒเธฐ 10 เธ•เธฑเธงเน�เธฃเธ� (YYYY-MM-DD)
 				rowServiceDatePrefix := ""
 				if len(rowServiceDate) >= 10 {
 					rowServiceDatePrefix = rowServiceDate[:10]
@@ -94,61 +93,61 @@ func findJSONByPIDCol3(pid string, excelPath string, serviceDate string) (json.R
 					serviceDatePrefix = serviceDate
 				}
 
-				// ถ้า serviceDate ไม่ตรงกัน ให้ข้ามแถวนี้
+				// เธ–เน�เธฒ serviceDate เน�เธกเน�เธ•เธฃเธ�เธ�เธฑเธ� เน�เธซเน�เธ�เน�เธฒเธกเน�เธ–เธงเธ�เธตเน�
 				if rowServiceDatePrefix != serviceDatePrefix {
 					continue
 				}
 			}
 
-			// ตรวจสอบว่ามีข้อมูลในคอลัมน์ json หรือไม่
+			// เธ•เธฃเธงเธ�เธชเธญเธ�เธงเน�เธฒเธกเธตเธ�เน�เธญเธกเธนเธฅเน�เธ�เธ�เธญเธฅเธฑเธกเธ�เน� json เธซเธฃเธทเธญเน�เธกเน�
 			if jsonColumnIndex < len(row.Cells) {
 				jsonStr := row.Cells[jsonColumnIndex].String()
 				if jsonStr == "" {
 					return json.RawMessage("{}"), nil
 				}
 
-				// ตรวจสอบว่าข้อมูลเป็น JSON ที่ถูกต้องหรือไม่
+				// เธ•เธฃเธงเธ�เธชเธญเธ�เธงเน�เธฒเธ�เน�เธญเธกเธนเธฅเน€เธ�เน�เธ� JSON เธ—เธตเน�เธ–เธนเธ�เธ•เน�เธญเธ�เธซเธฃเธทเธญเน�เธกเน�
 				var jsonData json.RawMessage
 				if err := json.Unmarshal([]byte(jsonStr), &jsonData); err != nil {
-					return nil, fmt.Errorf("ข้อมูลในคอลัมน์ 'json' ไม่ใช่ JSON ที่ถูกต้อง: %v", err)
+					return nil, fmt.Errorf("เธ�เน�เธญเธกเธนเธฅเน�เธ�เธ�เธญเธฅเธฑเธกเธ�เน� 'json' เน�เธกเน�เน�เธ�เน� JSON เธ—เธตเน�เธ–เธนเธ�เธ•เน�เธญเธ�: %v", err)
 				}
 
 				return jsonData, nil
 			}
-			return nil, errors.New("ไม่พบข้อมูลในคอลัมน์ 'json'")
+			return nil, errors.New("เน�เธกเน�เธ�เธ�เธ�เน�เธญเธกเธนเธฅเน�เธ�เธ�เธญเธฅเธฑเธกเธ�เน� 'json'")
 		}
 	}
 
-	// ถ้า serviceDate ถูกระบุแต่ไม่พบข้อมูลที่ตรงกัน
+	// เธ–เน�เธฒ serviceDate เธ–เธนเธ�เธฃเธฐเธ�เธธเน�เธ•เน�เน�เธกเน�เธ�เธ�เธ�เน�เธญเธกเธนเธฅเธ—เธตเน�เธ•เธฃเธ�เธ�เธฑเธ�
 	if serviceDate != "" {
-		return nil, fmt.Errorf("ไม่พบข้อมูลสำหรับ PID: %s และ serviceDate: %s", pid, serviceDate)
+		return nil, fmt.Errorf("เน�เธกเน�เธ�เธ�เธ�เน�เธญเธกเธนเธฅเธชเธณเธซเธฃเธฑเธ� PID: %s เน�เธฅเธฐ serviceDate: %s", pid, serviceDate)
 	}
 
-	return nil, fmt.Errorf("ไม่พบข้อมูลสำหรับ PID: %s", pid)
+	return nil, fmt.Errorf("เน�เธกเน�เธ�เธ�เธ�เน�เธญเธกเธนเธฅเธชเธณเธซเธฃเธฑเธ� PID: %s", pid)
 }
 
-// findJSONByPID ค้นหาข้อมูล JSON จาก Excel โดยใช้ PID
+// findJSONByPID เธ�เน�เธ�เธซเธฒเธ�เน�เธญเธกเธนเธฅ JSON เธ�เธฒเธ� Excel เน�เธ”เธขเน�เธ�เน� PID
 func findJSONByPID(pid string, excelPath string) (json.RawMessage, error) {
-	// เปิดไฟล์ Excel
+	// เน€เธ�เธดเธ”เน�เธ�เธฅเน� Excel
 	xlFile, err := xlsx.OpenFile(excelPath)
 	if err != nil {
-		return nil, fmt.Errorf("ไม่สามารถเปิดไฟล์ Excel ได้: %v", err)
+		return nil, fmt.Errorf("เน�เธกเน�เธชเธฒเธกเธฒเธฃเธ–เน€เธ�เธดเธ”เน�เธ�เธฅเน� Excel เน�เธ”เน�: %v", err)
 	}
 
-	// สมมติว่า sheet แรกคือที่เราต้องการ
+	// เธชเธกเธกเธ•เธดเธงเน�เธฒ sheet เน�เธฃเธ�เธ�เธทเธญเธ—เธตเน�เน€เธฃเธฒเธ•เน�เธญเธ�เธ�เธฒเธฃ
 	if len(xlFile.Sheets) == 0 {
-		return nil, errors.New("ไม่พบ sheet ในไฟล์ Excel")
+		return nil, errors.New("เน�เธกเน�เธ�เธ� sheet เน�เธ�เน�เธ�เธฅเน� Excel")
 	}
 	sheet := xlFile.Sheets[0]
 
-	// อ่านหัวข้อคอลัมน์ (สมมติว่าอยู่ในแถวแรก)
+	// เธญเน�เธฒเธ�เธซเธฑเธงเธ�เน�เธญเธ�เธญเธฅเธฑเธกเธ�เน� (เธชเธกเธกเธ•เธดเธงเน�เธฒเธญเธขเธนเน�เน�เธ�เน�เธ–เธงเน�เธฃเธ�)
 	if len(sheet.Rows) == 0 {
-		return nil, errors.New("Excel ไม่มีข้อมูล")
+		return nil, errors.New("Excel เน�เธกเน�เธกเธตเธ�เน�เธญเธกเธนเธฅ")
 	}
 
-	jsonColumnIndex := -1 // ตำแหน่งคอลัมน์ json
+	jsonColumnIndex := -1 // เธ•เธณเน�เธซเธ�เน�เธ�เธ�เธญเธฅเธฑเธกเธ�เน� json
 
-	// ค้นหาตำแหน่งคอลัมน์ json
+	// เธ�เน�เธ�เธซเธฒเธ•เธณเน�เธซเธ�เน�เธ�เธ�เธญเธฅเธฑเธกเธ�เน� json
 	for i, cell := range sheet.Rows[0].Cells {
 		headerText := cell.String()
 		if headerText == "json" {
@@ -158,67 +157,67 @@ func findJSONByPID(pid string, excelPath string) (json.RawMessage, error) {
 	}
 
 	if jsonColumnIndex == -1 {
-		return nil, errors.New("ไม่พบคอลัมน์ 'json' ในไฟล์ Excel")
+		return nil, errors.New("เน�เธกเน�เธ�เธ�เธ�เธญเธฅเธฑเธกเธ�เน� 'json' เน�เธ�เน�เธ�เธฅเน� Excel")
 	}
 
-	// ค้นหาแถวที่มีค่า PID ตรงกัน
+	// เธ�เน�เธ�เธซเธฒเน�เธ–เธงเธ—เธตเน�เธกเธตเธ�เน�เธฒ PID เธ•เธฃเธ�เธ�เธฑเธ�
 	for i := 1; i < len(sheet.Rows); i++ {
 		row := sheet.Rows[i]
 		if len(row.Cells) == 0 {
 			continue
 		}
 
-		// ตรวจสอบว่า PID ตรงกับที่ต้องการหรือไม่
+		// เธ•เธฃเธงเธ�เธชเธญเธ�เธงเน�เธฒ PID เธ•เธฃเธ�เธ�เธฑเธ�เธ—เธตเน�เธ•เน�เธญเธ�เธ�เธฒเธฃเธซเธฃเธทเธญเน�เธกเน�
 		rowPID := row.Cells[0].String()
 		if rowPID == pid {
-			// ตรวจสอบว่ามีข้อมูลในคอลัมน์ json หรือไม่
+			// เธ•เธฃเธงเธ�เธชเธญเธ�เธงเน�เธฒเธกเธตเธ�เน�เธญเธกเธนเธฅเน�เธ�เธ�เธญเธฅเธฑเธกเธ�เน� json เธซเธฃเธทเธญเน�เธกเน�
 			if jsonColumnIndex < len(row.Cells) {
 				jsonStr := row.Cells[jsonColumnIndex].String()
 				if jsonStr == "" {
 					return json.RawMessage("{}"), nil
 				}
 
-				// ตรวจสอบว่าข้อมูลเป็น JSON ที่ถูกต้องหรือไม่
+				// เธ•เธฃเธงเธ�เธชเธญเธ�เธงเน�เธฒเธ�เน�เธญเธกเธนเธฅเน€เธ�เน�เธ� JSON เธ—เธตเน�เธ–เธนเธ�เธ•เน�เธญเธ�เธซเธฃเธทเธญเน�เธกเน�
 				var jsonData json.RawMessage
 				if err := json.Unmarshal([]byte(jsonStr), &jsonData); err != nil {
-					return nil, fmt.Errorf("ข้อมูลในคอลัมน์ 'json' ไม่ใช่ JSON ที่ถูกต้อง: %v", err)
+					return nil, fmt.Errorf("เธ�เน�เธญเธกเธนเธฅเน�เธ�เธ�เธญเธฅเธฑเธกเธ�เน� 'json' เน�เธกเน�เน�เธ�เน� JSON เธ—เธตเน�เธ–เธนเธ�เธ•เน�เธญเธ�: %v", err)
 				}
 
 				return jsonData, nil
 			}
-			return nil, errors.New("ไม่พบข้อมูลในคอลัมน์ 'json'")
+			return nil, errors.New("เน�เธกเน�เธ�เธ�เธ�เน�เธญเธกเธนเธฅเน�เธ�เธ�เธญเธฅเธฑเธกเธ�เน� 'json'")
 		}
 	}
 
-	return nil, fmt.Errorf("ไม่พบข้อมูลสำหรับ PID: %s", pid)
+	return nil, fmt.Errorf("เน�เธกเน�เธ�เธ�เธ�เน�เธญเธกเธนเธฅเธชเธณเธซเธฃเธฑเธ� PID: %s", pid)
 }
 
-// handleAPI จัดการ endpoint หลักของ API
+// handleAPI เธ�เธฑเธ”เธ�เธฒเธฃ endpoint เธซเธฅเธฑเธ�เธ�เธญเธ� API
 func handleAPIAuthen(w http.ResponseWriter, r *http.Request) {
-	// กำหนด header
+	// เธ�เธณเธซเธ�เธ” header
 	w.Header().Set("Content-Type", "application/json")
 
-	// รับค่า parameter จาก URL
+	// เธฃเธฑเธ�เธ�เน�เธฒ parameter เธ�เธฒเธ� URL
 	query := r.URL.Query()
 
-	// ตรวจสอบค่า PID
+	// เธ•เธฃเธงเธ�เธชเธญเธ�เธ�เน�เธฒ PID
 	pid := query.Get("personalId")
 	serviceDate := query.Get("serviceDate")
 
-	// ถ้ามีค่า PID ให้ค้นหาข้อมูลใน Excel
+	// เธ–เน�เธฒเธกเธตเธ�เน�เธฒ PID เน�เธซเน�เธ�เน�เธ�เธซเธฒเธ�เน�เธญเธกเธนเธฅเน�เธ� Excel
 	if pid != "" {
-		// ตำแหน่งไฟล์ Excel (อาจจะต้องปรับเปลี่ยนตามการเก็บไฟล์ใน Vercel)
+		// เธ•เธณเน�เธซเธ�เน�เธ�เน�เธ�เธฅเน� Excel (เธญเธฒเธ�เธ�เธฐเธ•เน�เธญเธ�เธ�เธฃเธฑเธ�เน€เธ�เธฅเธตเน�เธขเธ�เธ•เธฒเธกเธ�เธฒเธฃเน€เธ�เน�เธ�เน�เธ�เธฅเน�เน�เธ� Vercel)
 		excelPath := "../data/Mockup API Authen&realPerson_Authen.xlsx"
 
 		data, err := findJSONByPIDCol3(pid, excelPath, serviceDate)
 		if err == nil {
-			// ส่งข้อมูลที่พบกลับไปโดยตรง
+			// เธชเน�เธ�เธ�เน�เธญเธกเธนเธฅเธ—เธตเน�เธ�เธ�เธ�เธฅเธฑเธ�เน�เธ�เน�เธ”เธขเธ•เธฃเธ�
 			json.NewEncoder(w).Encode(data)
 			return
 		} else {
-			// ถ้าไม่พบข้อมูลหรือมีข้อผิดพลาด
+			// เธ–เน�เธฒเน�เธกเน�เธ�เธ�เธ�เน�เธญเธกเธนเธฅเธซเธฃเธทเธญเธกเธตเธ�เน�เธญเธ�เธดเธ”เธ�เธฅเธฒเธ”
 			errorResponse := map[string]string{
-				"error": fmt.Sprintf("ไม่พบข้อมูลสำหรับ PID: %s", pid),
+				"error": fmt.Sprintf("เน�เธกเน�เธ�เธ�เธ�เน�เธญเธกเธนเธฅเธชเธณเธซเธฃเธฑเธ� PID: %s", pid),
 			}
 			w.WriteHeader(http.StatusNotFound)
 			json.NewEncoder(w).Encode(errorResponse)
@@ -226,39 +225,39 @@ func handleAPIAuthen(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// ถ้าไม่ได้ระบุ PID ให้ส่งข้อความแจ้งเตือน
+	// เธ–เน�เธฒเน�เธกเน�เน�เธ”เน�เธฃเธฐเธ�เธธ PID เน�เธซเน�เธชเน�เธ�เธ�เน�เธญเธ�เธงเธฒเธกเน�เธ�เน�เธ�เน€เธ•เธทเธญเธ�
 	errorResponse := map[string]string{
-		"error": "กรุณาระบุค่า PID (เช่น: /api?pid=P001)",
+		"error": "เธ�เธฃเธธเธ“เธฒเธฃเธฐเธ�เธธเธ�เน�เธฒ PID (เน€เธ�เน�เธ�: /api?pid=P001)",
 	}
 	w.WriteHeader(http.StatusBadRequest)
 	json.NewEncoder(w).Encode(errorResponse)
 }
 
-// handleAPI จัดการ endpoint หลักของ API
+// handleAPI เธ�เธฑเธ”เธ�เธฒเธฃ endpoint เธซเธฅเธฑเธ�เธ�เธญเธ� API
 func handleAPI(w http.ResponseWriter, r *http.Request) {
-	// กำหนด header
+	// เธ�เธณเธซเธ�เธ” header
 	w.Header().Set("Content-Type", "application/json")
 
-	// รับค่า parameter จาก URL
+	// เธฃเธฑเธ�เธ�เน�เธฒ parameter เธ�เธฒเธ� URL
 	query := r.URL.Query()
 
-	// ตรวจสอบค่า PID
+	// เธ•เธฃเธงเธ�เธชเธญเธ�เธ�เน�เธฒ PID
 	pid := query.Get("PID")
 
-	// ถ้ามีค่า PID ให้ค้นหาข้อมูลใน Excel
+	// เธ–เน�เธฒเธกเธตเธ�เน�เธฒ PID เน�เธซเน�เธ�เน�เธ�เธซเธฒเธ�เน�เธญเธกเธนเธฅเน�เธ� Excel
 	if pid != "" {
-		// ตำแหน่งไฟล์ Excel (อาจจะต้องปรับเปลี่ยนตามการเก็บไฟล์ใน Vercel)
+		// เธ•เธณเน�เธซเธ�เน�เธ�เน�เธ�เธฅเน� Excel (เธญเธฒเธ�เธ�เธฐเธ•เน�เธญเธ�เธ�เธฃเธฑเธ�เน€เธ�เธฅเธตเน�เธขเธ�เธ•เธฒเธกเธ�เธฒเธฃเน€เธ�เน�เธ�เน�เธ�เธฅเน�เน�เธ� Vercel)
 		excelPath := "../data/Mockup API Authen&realPerson_RealPerson.xlsx"
 
 		data, err := findJSONByPID(pid, excelPath)
 		if err == nil {
-			// ส่งข้อมูลที่พบกลับไปโดยตรง
+			// เธชเน�เธ�เธ�เน�เธญเธกเธนเธฅเธ—เธตเน�เธ�เธ�เธ�เธฅเธฑเธ�เน�เธ�เน�เธ”เธขเธ•เธฃเธ�
 			json.NewEncoder(w).Encode(data)
 			return
 		} else {
-			// ถ้าไม่พบข้อมูลหรือมีข้อผิดพลาด
+			// เธ–เน�เธฒเน�เธกเน�เธ�เธ�เธ�เน�เธญเธกเธนเธฅเธซเธฃเธทเธญเธกเธตเธ�เน�เธญเธ�เธดเธ”เธ�เธฅเธฒเธ”
 			errorResponse := map[string]string{
-				"error": fmt.Sprintf("ไม่พบข้อมูลสำหรับ PID: %s", pid),
+				"error": fmt.Sprintf("เน�เธกเน�เธ�เธ�เธ�เน�เธญเธกเธนเธฅเธชเธณเธซเธฃเธฑเธ� PID: %s", pid),
 			}
 			w.WriteHeader(http.StatusNotFound)
 			json.NewEncoder(w).Encode(errorResponse)
@@ -266,15 +265,15 @@ func handleAPI(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// ถ้าไม่ได้ระบุ PID ให้ส่งข้อความแจ้งเตือน
+	// เธ–เน�เธฒเน�เธกเน�เน�เธ”เน�เธฃเธฐเธ�เธธ PID เน�เธซเน�เธชเน�เธ�เธ�เน�เธญเธ�เธงเธฒเธกเน�เธ�เน�เธ�เน€เธ•เธทเธญเธ�
 	errorResponse := map[string]string{
-		"error": "กรุณาระบุค่า PID (เช่น: /api?pid=P001)",
+		"error": "เธ�เธฃเธธเธ“เธฒเธฃเธฐเธ�เธธเธ�เน�เธฒ PID (เน€เธ�เน�เธ�: /api?pid=P001)",
 	}
 	w.WriteHeader(http.StatusBadRequest)
 	json.NewEncoder(w).Encode(errorResponse)
 }
 
-// handleRoot จัดการเส้นทางหลัก
+// handleRoot เธ�เธฑเธ”เธ�เธฒเธฃเน€เธชเน�เธ�เธ—เธฒเธ�เธซเธฅเธฑเธ�
 func handleRoot(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
@@ -284,46 +283,29 @@ func handleRoot(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	msg := Message{
 		Status:    "success",
-		Message:   "ยินดีต้อนรับสู่ API ลองใช้ endpoint /api เพื่อดูข้อมูล",
+		Message:   "เธขเธดเธ�เธ”เธตเธ•เน�เธญเธ�เธฃเธฑเธ�เธชเธนเน� API เธฅเธญเธ�เน�เธ�เน� endpoint /api เน€เธ�เธทเน�เธญเธ”เธนเธ�เน�เธญเธกเธนเธฅ",
 		Timestamp: time.Now(),
 	}
 
 	json.NewEncoder(w).Encode(msg)
 }
 
-func main() {
-	// รับค่า port จากตัวแปรสภาพแวดล้อมหรือใช้ค่าเริ่มต้น
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
-	// ตั้งค่าเส้นทาง
-	http.HandleFunc("/", handleRoot)
-	http.HandleFunc("/api/RealPerson", handleAPI)
-	http.HandleFunc("/authencodeapi/CheckAuthenStatus", handleAPIAuthen)
-
-	fmt.Println("เริ่มต้นเซิร์ฟเวอร์ที่พอร์ต:", port)
-	// เริ่มเซิร์ฟเวอร์
-	http.ListenAndServe(":"+port, nil)
-}
-
-// Handler เป็นฟังก์ชันหลักที่จะถูกเรียกโดย Vercel
+// Handler เน€เธ�เน�เธ�เธ�เธฑเธ�เธ�เน�เธ�เธฑเธ�เธซเธฅเธฑเธ�เธ—เธตเน�เธ�เธฐเธ–เธนเธ�เน€เธฃเธตเธขเธ�เน�เธ”เธข Vercel
 func Handler(w http.ResponseWriter, r *http.Request) {
-	// กำหนด CORS headers
+	// เธ�เธณเธซเธ�เธ” CORS headers
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Content-Type", "application/json")
 
-	// จัดการกับ OPTIONS request (สำหรับ CORS preflight)
+	// เธ�เธฑเธ”เธ�เธฒเธฃเธ�เธฑเธ� OPTIONS request (เธชเธณเธซเธฃเธฑเธ� CORS preflight)
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
-	// ตรวจสอบเส้นทาง
+	// เธ•เธฃเธงเธ�เธชเธญเธ�เน€เธชเน�เธ�เธ—เธฒเธ�
 	if r.URL.Path == "/" {
-		// หน้าหลัก
+		// เธซเธ�เน�เธฒเธซเธฅเธฑเธ�
 		homeHandler(w, r)
 		return
 	}
@@ -340,17 +322,17 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// กรณีไม่พบเส้นทาง
+	// เธ�เธฃเธ“เธตเน�เธกเน�เธ�เธ�เน€เธชเน�เธ�เธ—เธฒเธ�
 	w.WriteHeader(http.StatusNotFound)
 	json.NewEncoder(w).Encode(map[string]string{
-		"error": "เส้นทางไม่ถูกต้อง",
+		"error": "เน€เธชเน�เธ�เธ—เธฒเธ�เน�เธกเน�เธ–เธนเธ�เธ•เน�เธญเธ�",
 	})
 }
 
-// homeHandler จัดการเส้นทางหลัก
+// homeHandler เธ�เธฑเธ”เธ�เธฒเธฃเน€เธชเน�เธ�เธ—เธฒเธ�เธซเธฅเธฑเธ�
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":  "success",
-		"message": "ยินดีต้อนรับสู่ API ลองใช้ endpoint /api?pid=P001 หรือ /api?pid=P001&serviceDate=2025-02-15 เพื่อดูข้อมูล JSON",
+		"message": "เธขเธดเธ�เธ”เธตเธ•เน�เธญเธ�เธฃเธฑเธ�เธชเธนเน� API เธฅเธญเธ�เน�เธ�เน� endpoint /api?pid=P001 เธซเธฃเธทเธญ /api?pid=P001&serviceDate=2025-02-15 เน€เธ�เธทเน�เธญเธ”เธนเธ�เน�เธญเธกเธนเธฅ JSON",
 	})
 }
