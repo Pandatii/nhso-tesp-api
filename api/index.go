@@ -13,7 +13,7 @@ import (
 	"github.com/tealeg/xlsx"
 )
 
-const excelGitHubAuthenURL = "https://github.com/Pandatii/nhso-tesp-api/blob/fa1f940128e0998b2b8afe016657d76cda680895/api/Authen.xlsx"
+const excelGitHubAuthenURL = "https://storage.cloud.google.com/nhso-test-bucket/Authen.xlsx"
 
 func Handler(w http.ResponseWriter, r *http.Request) {
 	// กำหนด CORS headers
