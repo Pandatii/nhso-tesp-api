@@ -102,12 +102,12 @@ func apiHandlerAuthen(w http.ResponseWriter, r *http.Request) {
 
 	// ตรวจสอบค่า PID และ serviceDate
 	pid := query.Get("personalId")
-	serviceDate := query.Get("serviceDate serviceDate")
+	serviceDate := query.Get("serviceDate")
 
 	// ถ้ามีค่า PID ให้ค้นหาข้อมูลใน Excel
 	if pid != "" {
 		// ตำแหน่งไฟล์ Excel (ต้องอยู่ใน folder api)
-		excelPath := "../data/Mockup API Authen&realPerson_Authen.xlsx"
+		excelPath := "./Mockup API Authen&realPerson_Authen.xlsx"
 
 		jsonData, err := findJSONByPIDCol2(pid, serviceDate, excelPath)
 		if err == nil {
@@ -197,7 +197,7 @@ func findJSONByPID(pid string, excelPath string) (json.RawMessage, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("ไม่พบข้อมูลสำหรับ PID: %s", pid)
+	return nil, fmt.Errorf("not found PID: %s", pid)
 }
 
 // findJSONByPID ค้นหาข้อมูล JSON จาก Excel โดยใช้ PID และ serviceDate
@@ -227,7 +227,7 @@ func findJSONByPIDCol2(pid string, serviceDate string, excelPath string) (json.R
 		headerText := cell.String()
 		if headerText == "json" {
 			jsonColumnIndex = i
-		} else if headerText == "serviceDate" {
+		} else if headerText == "serviceDate serviceDate" {
 			serviceDateColumnIndex = i
 		}
 	}
