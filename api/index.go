@@ -153,8 +153,7 @@ func findJSONByPID(pid string, excelPath string) (json.RawMessage, error) {
 		return nil, errors.New("Excel ไม่มีข้อมูล")
 	}
 
-	jsonColumnIndex := -1        // ตำแหน่งคอลัมน์ json
-	serviceDateColumnIndex := -1 // ตำแหน่งคอลัมน์ serviceDate
+	jsonColumnIndex := -1 // ตำแหน่งคอลัมน์ json
 
 	// ค้นหาตำแหน่งคอลัมน์ที่ต้องการ
 	for i, cell := range sheet.Rows[0].Cells {
