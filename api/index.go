@@ -68,7 +68,7 @@ func apiHandlerRealPerson(w http.ResponseWriter, r *http.Request) {
 	// ถ้ามีค่า PID ให้ค้นหาข้อมูลใน Excel
 	if pid != "" {
 		// ตำแหน่งไฟล์ Excel (ต้องอยู่ใน folder api)
-		excelPath := "../data/Mockup API Authen&realPerson_RealPerson.xlsx"
+		excelPath := "./Mockup API Authen&realPerson_RealPerson.xlsx"
 
 		jsonData, err := findJSONByPID(pid, excelPath)
 		if err == nil {
