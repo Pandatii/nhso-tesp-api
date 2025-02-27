@@ -82,6 +82,17 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// writeJSON ช่วยเขียน JSON response ให้รองรับภาษาไทย
+func writeJSON(w http.ResponseWriter, data interface{}) {
+	jsonBytes, err := json.Marshal(data)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"status":"error","message":"เกิดข้อผิดพลาดในการสร้าง JSON"}`))
+		return
+	}
+	w.Write(jsonBytes)
+}
+
 // homeHandler จัดการเส้นทางหลัก
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{
