@@ -825,7 +825,7 @@ func findJSONByPIDCol2(pid string, serviceDate string, excelPath string) (json.R
 // findDataByPID ค้นหาข้อมูลตาม PID และ serviceDate
 func findJSONByPIDFromAuthenData(pid string, serviceDate string) (interface{}, error) {
 	// ค้นหาข้อมูลตาม PID
-	data, exists := userData[pid]
+	data, exists := userAuthenData[pid]
 	if !exists {
 		return nil, fmt.Errorf("ไม่พบข้อมูลสำหรับ PID: %s", pid)
 	}
