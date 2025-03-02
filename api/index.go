@@ -13,21 +13,58 @@ import (
 
 var userAuthenData = map[string]interface{}{}
 
+// ฝังไฟล์ CSV ลงในโค้ด
+//
+//go:embed realPerson.csv
+var realPersonData []byte
+
+// Response โครงสร้างข้อมูลสำหรับ API response
+type Response struct {
+	Success bool              `json:"success"`
+	Message string            `json:"message"`
+	Data    map[string]string `json:"data,omitempty"`
+}
+
 // printLog ฟังก์ชันสำหรับแสดง log
 func printLog(level string, message string, data interface{}) {
 	fmt.Printf("[%s] %s: %v\n", level, message, data)
 }
 
-//go:embed *.csv
-var csvFiles embed.FS
+// findProductByPID ค้นหาข้อมูลจาก CSV โดยใช้ PID
+func findProductByPID(pid string) (map[string]string, error) {
+	// สร้าง reader สำหรับอ่านข้อมูล CSV จาก bytes
+	reader := csv.NewReader(bytes.NewReader(realPersonData))
 
-// Response โครงสร้างข้อมูลสำหรับ API response
-type Response struct {
-	Message   string                         `json:"message"`
-	FileData  map[string][]map[string]string `json:"fileData"`
-	FileCount int                            `json:"fileCount"`
-	TotalRows map[string]int                 `json:"totalRows"`
-	Files     []string                       `json:"files"`
+	// อ่านข้อมูล CSV ทั้งหมด
+	records, err := reader.ReadAll()
+	if err != nil {
+		return nil, fmt.Errorf("error reading CSV: %v", err)
+	}
+
+	// ตรวจสอบว่ามีข้อมูลหรือไม่
+	if len(records) < 2 {
+		return nil, fmt.Errorf("CSV is empty or only has headers")
+	}
+
+	// แถวแรกเป็น headers
+	headers := records[0]
+
+	// ค้นหาข้อมูลจาก column แรก (PID)
+	for i := 1; i < len(records); i++ {
+		if len(records[i]) > 0 && records[i][0] == pid {
+			// พบข้อมูล - สร้าง map ของข้อมูล
+			result := make(map[string]string)
+
+			for j := 0; j < len(headers) && j < len(records[i]); j++ {
+				result[headers[j]] = records[i][j]
+			}
+
+			return result, nil
+		}
+	}
+
+	// ไม่พบข้อมูล
+	return nil, fmt.Errorf("product with PID %s not found", pid)
 }
 
 // Handler function สำหรับ Vercel serverless
@@ -184,6 +221,76 @@ func csvToMap(records [][]string) ([]map[string]string, error) {
 func Handler(w http.ResponseWriter, r *http.Request) {
 	// ตั้งค่า response header
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+
+	// จัดการกับ CORS preflight request
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// ตรวจสอบว่าเป็น GET request
+	if r.Method != "GET" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(Response{
+			Success: false,
+			Message: "Method not allowed. Only GET is supported.",
+		})
+		return
+	}
+
+	// รับค่า pid จาก query parameter
+	pid := r.URL.Query().Get("pid")
+
+	// ตรวจสอบว่ามีการระบุ pid หรือไม่
+	if pid == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(Response{
+			Success: false,
+			Message: "Missing required parameter: pid",
+		})
+		return
+	}
+
+	printLog("INFO", "Searching for product", pid)
+
+	// ค้นหาข้อมูล
+	product, err := findProductByPID(pid)
+	if err != nil {
+		// ตรวจสอบว่าเป็น error "not found" หรือไม่
+		if strings.Contains(err.Error(), "not found") {
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(Response{
+				Success: false,
+				Message: fmt.Sprintf("Product with PID %s not found", pid),
+			})
+		} else {
+			// กรณีเกิด error อื่นๆ
+			printLog("ERROR", "Error finding product", err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(Response{
+				Success: false,
+				Message: "Error processing request: " + err.Error(),
+			})
+		}
+		return
+	}
+
+	// ส่งข้อมูลกลับ
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(Response{
+		Success: true,
+		Message: "Product found",
+		Data:    product,
+	})
+}
+
+/*
+// Handler function สำหรับ Vercel serverless
+func Handler(w http.ResponseWriter, r *http.Request) {
+	// ตั้งค่า response header
+	w.Header().Set("Content-Type", "application/json")
 
 	// ดึงชื่อไฟล์จาก query parameter (ถ้ามี)
 	requestedFile := r.URL.Query().Get("file")
@@ -261,7 +368,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	// ส่ง response
 	w.Write(jsonResponse)
-}
+}*/
 
 func makeAuthenData() {
 	userAuthenData := make(map[string]interface{})
