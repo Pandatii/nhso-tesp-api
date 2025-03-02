@@ -44,7 +44,7 @@ func writeJSON(w http.ResponseWriter, data interface{}) {
 func apiHandlerAuthen(w http.ResponseWriter, r *http.Request) {
 
 	// รับค่า pid จาก query parameter
-	pid := r.URL.Query().Get("pid")
+	pid := r.URL.Query().Get("personalId")
 
 	serviceDate := r.URL.Query().Get("serviceDate")
 
@@ -53,7 +53,7 @@ func apiHandlerAuthen(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(ErrorResponse{
 			Success: false,
-			Message: "Missing required parameter: pid or serviceDate",
+			Message: "Missing required parameter: personalId or serviceDate",
 		})
 		return
 	}
