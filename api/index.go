@@ -43,6 +43,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if strings.HasPrefix(r.URL.Path, "/authencodeapi") {
+
+		fmt.Println("API Authen")
 		// API endpoint
 		apiHandlerAuthen(w, r)
 		return
