@@ -8,7 +8,7 @@ import (
 )
 
 // userData เก็บข้อมูลแบบ hard-coded จากไฟล์ Excel
-var userAuthenData = map[string]interface{}{
+var userData = map[string]interface{}{
 	    "1443852933786": {
 	        "age": "32 ปี 5 เดือน 21 วัน",
 	        "birthDate": "1992-09-06",

@@ -31,6 +31,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	makeAuthenData()
+
 	// สร้าง response object
 	response := Response{
 		Message:   "Hello from Go API on Vercel!",
@@ -53,6 +55,14 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	// เขียน response
 	w.Write(jsonResponse)
+}
+
+func makeAuthenData() {
+	userAuthenData := make(map[string]interface{})
+
+	userAuthenData["2182893981963"] = []map[string]interface{}{
+		{"age": "32 ปี 5 เดือน 21 วัน", "birthDate": "1992-09-06", "firstName": "ทดสอบ10", "fullName": "ทดสอบ10 ทดสอบ", "lastName": "ทดสอบ", "mainInscl": "UCS", "mainInsclName": "สิทธิหลักประกันสุขภาพแห่งชาติ", "middleName": "", "nationCode": "099", "nationDescription": "ไทย", "paidModel": "1", "personalId": "1443852933786", "provinceCode": "17", "provinceName": "สิงห์บุรี", "serviceDate": "2025-02-02 7:54:00", "sex": "หญิง", "statusAuthen": "TRUE", "statusMessage": "พบข้อมูลการ authen", "subInscl": "", "subInsclName": ""},
+	}
 }
 
 // apiHandler จัดการ API endpoint
