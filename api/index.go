@@ -2,26 +2,40 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
-	"strings"
-	"time"
 
-	"github.com/tealeg/xlsx"
+	//"net/http"
+
+	"encoding/csv"
+
+	_ "embed" // จำเป็นสำหรับการใช้งาน //go:embed
+	//"github.com/tealeg/xlsx"
 )
 
 var userAuthenData = map[string]interface{}{}
 
+// printLog ฟังก์ชันสำหรับแสดง log
+func printLog(level string, message string, data interface{}) {
+	fmt.Printf("[%s] %s: %v\n", level, message, data)
+}
+
+// ฝังไฟล์ CSV ลงในตัวแปร csvData ด้วย //go:embed directive
+//
+//go:embed data.csv
+var csvData []byte
+
 // Response โครงสร้างข้อมูลสำหรับ API response
 type Response struct {
-	Message   string    `json:"message"`
-	Version   string    `json:"version"`
-	Timestamp time.Time `json:"timestamp"`
+	Message string              `json:"message"`
+	Data    []map[string]string `json:"data"`
+	Total   int                 `json:"total"`
 }
 
 // Handler function สำหรับ Vercel serverless
+/*
 func Handler(w http.ResponseWriter, r *http.Request) {
 	// ตั้งค่า response header
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -63,6 +77,65 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	// เขียน response
 	w.Write(jsonResponse)
 }
+*/
+
+// Handler function สำหรับ Vercel serverless
+func Handler(w http.ResponseWriter, r *http.Request) {
+	// ตั้งค่า response header
+	w.Header().Set("Content-Type", "application/json")
+
+	// สร้าง reader สำหรับอ่านข้อมูล CSV จาก bytes
+	reader := csv.NewReader(bytes.NewReader(csvData))
+
+	// อ่านข้อมูล CSV ทั้งหมด
+	records, err := reader.ReadAll()
+	if err != nil {
+		fmt.Println("Error reading CSV:", err)
+		http.Error(w, "Error reading CSV data", http.StatusInternalServerError)
+		return
+	}
+
+	// ตรวจสอบว่ามีข้อมูลหรือไม่
+	if len(records) == 0 {
+		fmt.Println("CSV is empty")
+		http.Error(w, "CSV data is empty", http.StatusInternalServerError)
+		return
+	}
+
+	// สมมติว่าแถวแรกเป็น headers
+	headers := records[0]
+
+	// แปลงข้อมูลให้อยู่ในรูปแบบที่ใช้งานง่าย (array ของ objects)
+	var data []map[string]string
+
+	for i := 1; i < len(records); i++ {
+		row := make(map[string]string)
+
+		for j := 0; j < len(headers) && j < len(records[i]); j++ {
+			row[headers[j]] = records[i][j]
+		}
+
+		data = append(data, row)
+	}
+
+	// สร้าง response
+	response := Response{
+		Message: "CSV data processed successfully",
+		Data:    data,
+		Total:   len(data),
+	}
+
+	// แปลงเป็น JSON
+	jsonResponse, err := json.Marshal(response)
+	if err != nil {
+		fmt.Println("Error creating JSON:", err)
+		http.Error(w, "Error creating JSON response", http.StatusInternalServerError)
+		return
+	}
+
+	// ส่ง response
+	w.Write(jsonResponse)
+}
 
 func makeAuthenData() {
 	userAuthenData := make(map[string]interface{})
@@ -72,6 +145,7 @@ func makeAuthenData() {
 	}
 }
 
+/*
 // apiHandler จัดการ API endpoint
 func apiHandlerAuthen(w http.ResponseWriter, r *http.Request) {
 	// รับค่า parameter จาก URL
@@ -108,7 +182,9 @@ func apiHandlerAuthen(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusBadRequest)
 	json.NewEncoder(w).Encode(errorResponse)
 }
+*/
 
+/*
 func findJSONByPIDFromExcel(pid string, serviceDate string) (interface{}, error) {
 
 	excelFileName := "Authen.xlsx"
@@ -211,6 +287,8 @@ func findJSONByPIDFromExcel(pid string, serviceDate string) (interface{}, error)
 
 	return nil, fmt.Errorf("ไม่พบข้อมูลสำหรับ PID: %s", pid)
 }
+
+*/
 
 // findDataByPID ค้นหาข้อมูลตาม PID และ serviceDate
 func findJSONByPIDFromAuthenData(pid string, serviceDate string) (interface{}, error) {
