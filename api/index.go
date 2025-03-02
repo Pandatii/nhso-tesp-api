@@ -2,7 +2,6 @@
 package api
 
 import (
-	"api/logger"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -32,13 +31,9 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// บันทึก log เมื่อเริ่มทำงาน
-	logger.Info("Request started", "Handler", map[string]interface{}{
-		"method": r.Method,
-		"path":   r.URL.Path,
-	})
-
 	makeAuthenData()
+
+	writeJSON(w, userAuthenData)
 
 	// สร้าง response object
 	response := Response{
