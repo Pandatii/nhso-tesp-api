@@ -1,0 +1,101 @@
+package api
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"time"
+)
+
+// LogLevel กำหนดระดับความสำคัญของ log
+type LogLevel string
+
+const (
+	DEBUG LogLevel = "DEBUG"
+	INFO  LogLevel = "INFO"
+	WARN  LogLevel = "WARN"
+	ERROR LogLevel = "ERROR"
+	FATAL LogLevel = "FATAL"
+)
+
+// LogEntry โครงสร้างข้อมูลสำหรับบันทึก log
+type LogEntry struct {
+	Timestamp string      `json:"timestamp"`
+	Level     LogLevel    `json:"level"`
+	Message   string      `json:"message"`
+	Function  string      `json:"function,omitempty"`
+	Data      interface{} `json:"data,omitempty"`
+}
+
+// Log ฟังก์ชันเขียน log ในรูปแบบ JSON สำหรับ Vercel
+func Log(level LogLevel, message string, function string, data interface{}) {
+	entry := LogEntry{
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
+		Level:     level,
+		Message:   message,
+		Function:  function,
+		Data:      data,
+	}
+
+	// แปลงเป็น JSON
+	jsonData, err := json.Marshal(entry)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error marshaling log: %v\n", err)
+		return
+	}
+
+	// เขียน log ไปที่ stdout สำหรับ Vercel logging
+	fmt.Println(string(jsonData))
+}
+
+// Debug สำหรับแสดง log ประเภท debug
+func Debug(message string, function string, data interface{}) {
+	Log(DEBUG, message, function, data)
+}
+
+// Info สำหรับแสดง log ประเภท info
+func Info(message string, function string, data interface{}) {
+	Log(INFO, message, function, data)
+}
+
+// Warn สำหรับแสดง log ประเภท warning
+func Warn(message string, function string, data interface{}) {
+	Log(WARN, message, function, data)
+}
+
+// Error สำหรับแสดง log ประเภท error
+func Error(message string, function string, data interface{}) {
+	Log(ERROR, message, function, data)
+}
+
+// Fatal สำหรับแสดง log ประเภท fatal error
+func Fatal(message string, function string, data interface{}) {
+	Log(FATAL, message, function, data)
+	os.Exit(1)
+}
+
+// LogMap สำหรับบันทึก log ของ map[string]interface{} (JSON data)
+func LogMap(level LogLevel, message string, function string, data map[string]interface{}) {
+	Log(level, message, function, data)
+}
+
+// PrettyLog แสดง log แบบมีการจัดรูปแบบให้อ่านง่าย
+func PrettyLog(level LogLevel, message string, function string, data interface{}) {
+	entry := LogEntry{
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
+		Level:     level,
+		Message:   message,
+		Function:  function,
+		Data:      data,
+	}
+
+	// แปลงเป็น JSON แบบมีการจัดรูปแบบ
+	jsonData, err := json.MarshalIndent(entry, "", "  ")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error marshaling log: %v\n", err)
+		return
+	}
+
+	// เขียน log ไปที่ stdout สำหรับ Vercel logging
+	fmt.Println(string(jsonData))
+}
