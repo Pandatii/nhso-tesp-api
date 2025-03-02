@@ -3,16 +3,12 @@ package api
 
 import (
 	"bytes"
+	"embed"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"net/http"
-
-	//"net/http"
-
-	"encoding/csv"
-
-	_ "embed" // จำเป็นสำหรับการใช้งาน //go:embed
-	//"github.com/tealeg/xlsx"
+	"strings"
 )
 
 var userAuthenData = map[string]interface{}{}
@@ -22,16 +18,16 @@ func printLog(level string, message string, data interface{}) {
 	fmt.Printf("[%s] %s: %v\n", level, message, data)
 }
 
-// ฝังไฟล์ CSV ลงในตัวแปร csvData ด้วย //go:embed directive
-//
-//go:embed data.csv
-var csvData []byte
+//go:embed *.csv
+var csvFiles embed.FS
 
 // Response โครงสร้างข้อมูลสำหรับ API response
 type Response struct {
-	Message string              `json:"message"`
-	Data    []map[string]string `json:"data"`
-	Total   int                 `json:"total"`
+	Message   string                         `json:"message"`
+	FileData  map[string][]map[string]string `json:"fileData"`
+	FileCount int                            `json:"fileCount"`
+	TotalRows map[string]int                 `json:"totalRows"`
+	Files     []string                       `json:"files"`
 }
 
 // Handler function สำหรับ Vercel serverless
@@ -79,6 +75,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 }
 */
 
+/*
 // Handler function สำหรับ Vercel serverless
 func Handler(w http.ResponseWriter, r *http.Request) {
 	// ตั้งค่า response header
@@ -123,6 +120,135 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		Message: "CSV data processed successfully",
 		Data:    data,
 		Total:   len(data),
+	}
+
+	// แปลงเป็น JSON
+	jsonResponse, err := json.Marshal(response)
+	if err != nil {
+		fmt.Println("Error creating JSON:", err)
+		http.Error(w, "Error creating JSON response", http.StatusInternalServerError)
+		return
+	}
+
+	// ส่ง response
+	w.Write(jsonResponse)
+}
+*/
+
+// readCSVFromFS อ่านไฟล์ CSV จาก embed.FS
+func readCSVFromFS(fs embed.FS, filename string) ([][]string, error) {
+	// อ่านไฟล์จาก embed.FS
+	fileContent, err := fs.ReadFile(filename)
+	if err != nil {
+		return nil, fmt.Errorf("error reading embedded file %s: %v", filename, err)
+	}
+
+	// อ่าน CSV จาก bytes
+	reader := csv.NewReader(bytes.NewReader(fileContent))
+
+	// อ่านทุกแถวจาก CSV
+	records, err := reader.ReadAll()
+	if err != nil {
+		return nil, fmt.Errorf("error parsing CSV from %s: %v", filename, err)
+	}
+
+	return records, nil
+}
+
+// csvToMap แปลงข้อมูล CSV เป็น array ของ map
+func csvToMap(records [][]string) ([]map[string]string, error) {
+	if len(records) == 0 {
+		return nil, fmt.Errorf("CSV data is empty")
+	}
+
+	// แถวแรกเป็น headers
+	headers := records[0]
+
+	// แปลงข้อมูล
+	result := make([]map[string]string, 0, len(records)-1)
+
+	for i := 1; i < len(records); i++ {
+		row := make(map[string]string)
+
+		for j := 0; j < len(headers) && j < len(records[i]); j++ {
+			row[headers[j]] = records[i][j]
+		}
+
+		result = append(result, row)
+	}
+
+	return result, nil
+}
+
+// Handler function สำหรับ Vercel serverless
+func Handler(w http.ResponseWriter, r *http.Request) {
+	// ตั้งค่า response header
+	w.Header().Set("Content-Type", "application/json")
+
+	// ดึงชื่อไฟล์จาก query parameter (ถ้ามี)
+	requestedFile := r.URL.Query().Get("file")
+
+	// สร้าง response
+	response := Response{
+		Message:   "CSV data processed successfully",
+		FileData:  make(map[string][]map[string]string),
+		TotalRows: make(map[string]int),
+		Files:     []string{},
+	}
+
+	// ลิสต์ไฟล์ทั้งหมดที่ฝังมา
+	entries, err := csvFiles.ReadDir(".")
+	if err != nil {
+		fmt.Println("Error reading embedded directory:", err)
+		http.Error(w, "Error listing CSV files", http.StatusInternalServerError)
+		return
+	}
+
+	// จำนวนไฟล์ที่พบ
+	fileCount := 0
+
+	// ทำงานกับไฟล์แต่ละไฟล์
+	for _, entry := range entries {
+		// ข้ามหากไม่ใช่ไฟล์หรือไม่ใช่ไฟล์ .csv
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".csv") {
+			continue
+		}
+
+		// เพิ่มในรายการไฟล์
+		response.Files = append(response.Files, entry.Name())
+		fileCount++
+
+		// ถ้ามีการระบุชื่อไฟล์และไม่ตรงกับไฟล์ปัจจุบัน ให้ข้ามไป
+		if requestedFile != "" && requestedFile != entry.Name() {
+			continue
+		}
+
+		// อ่านและแปลงข้อมูล CSV
+		records, err := readCSVFromFS(csvFiles, entry.Name())
+		if err != nil {
+			fmt.Printf("Error reading %s: %v\n", entry.Name(), err)
+			continue
+		}
+
+		// แปลงเป็น array ของ map
+		data, err := csvToMap(records)
+		if err != nil {
+			fmt.Printf("Error processing %s: %v\n", entry.Name(), err)
+			continue
+		}
+
+		// เพิ่มข้อมูลลงใน response
+		response.FileData[entry.Name()] = data
+		response.TotalRows[entry.Name()] = len(data)
+	}
+
+	// อัปเดตจำนวนไฟล์
+	response.FileCount = fileCount
+
+	// กรณีระบุชื่อไฟล์แต่ไม่พบ
+	if requestedFile != "" && len(response.FileData) == 0 {
+		http.Error(w, fmt.Sprintf("Requested file '%s' not found", requestedFile), http.StatusNotFound)
+		return
 	}
 
 	// แปลงเป็น JSON
