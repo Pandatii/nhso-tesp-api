@@ -3,6 +3,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -83,7 +84,7 @@ func apiHandlerAuthen(w http.ResponseWriter, r *http.Request) {
 	// ถ้ามีค่า PID ให้ค้นหาข้อมูลใน Excel
 	if pid != "" {
 
-		jsonData, err := (pid, serviceDate)
+		jsonData, err := findJSONByPIDFromExcel(pid, serviceDate)
 		if err == nil {
 			// ส่งข้อมูล JSON กลับไปโดยตรง
 			writeJSON(w, jsonData)
