@@ -1,5 +1,5 @@
 // api/index.go
-package handler
+package api
 
 import (
 	"encoding/json"
@@ -18,21 +18,21 @@ type Response struct {
 func Handler(w http.ResponseWriter, r *http.Request) {
 	// ตั้งค่า response header
 	w.Header().Set("Content-Type", "application/json")
-	
+
 	// สร้าง response object
 	response := Response{
 		Message:   "Hello from Go API on Vercel!",
 		Version:   "1.0.0",
 		Timestamp: time.Now(),
 	}
-	
+
 	// แปลง response เป็น JSON
 	jsonResponse, err := json.Marshal(response)
 	if err != nil {
 		http.Error(w, "Error creating JSON response", http.StatusInternalServerError)
 		return
 	}
-	
+
 	// เขียน response
 	w.Write(jsonResponse)
 }
