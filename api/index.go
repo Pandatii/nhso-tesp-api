@@ -20,9 +20,13 @@ var realPersonData []byte
 var authenData []byte
 
 // ErrorResponse โครงสร้างข้อมูลสำหรับ error response
-type ErrorResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
+type ErrorResponseAuthen struct {
+	StatusAuthen  string `json:"statusAuthen"`
+	StatusMessage string `json:"statusMessage"`
+}
+
+type ErrorResponseRealPerson struct {
+	DataError string `json:"dataError"`
 }
 
 // printLog ฟังก์ชันสำหรับแสดง log
@@ -51,9 +55,9 @@ func apiHandlerAuthen(w http.ResponseWriter, r *http.Request) {
 	// ตรวจสอบว่ามีการระบุ pid หรือไม่
 	if pid == "" || serviceDate == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{
-			Success: false,
-			Message: "Missing required parameter: personalId or serviceDate",
+		json.NewEncoder(w).Encode(ErrorResponseAuthen{
+			StatusAuthen:  "false",
+			StatusMessage: "Missing required parameter: personalId or serviceDate",
 		})
 		return
 	}
@@ -68,9 +72,9 @@ func apiHandlerAuthen(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		printLog("ERROR", "Failed to read CSV", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(ErrorResponse{
-			Success: false,
-			Message: "Error reading data source: " + err.Error(),
+		json.NewEncoder(w).Encode(ErrorResponseAuthen{
+			StatusAuthen:  "false",
+			StatusMessage: "ไม่พบข้อมูลการ Authen",
 		})
 		return
 	}
@@ -79,9 +83,9 @@ func apiHandlerAuthen(w http.ResponseWriter, r *http.Request) {
 	if len(records) < 1 {
 		printLog("ERROR", "CSV is empty", nil)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(ErrorResponse{
-			Success: false,
-			Message: "Data source is empty",
+		json.NewEncoder(w).Encode(ErrorResponseAuthen{
+			StatusAuthen:  "false",
+			StatusMessage: "ไม่พบข้อมูลการ Authen",
 		})
 		return
 	}
@@ -104,9 +108,9 @@ func apiHandlerAuthen(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				printLog("ERROR", "Invalid JSON in data source", err.Error())
 				w.WriteHeader(http.StatusInternalServerError)
-				json.NewEncoder(w).Encode(ErrorResponse{
-					Success: false,
-					Message: "Invalid JSON format in data source: " + err.Error(),
+				json.NewEncoder(w).Encode(ErrorResponseAuthen{
+					StatusAuthen:  "false",
+					StatusMessage: "ไม่พบข้อมูลการ Authen",
 				})
 				return
 			}
@@ -124,9 +128,9 @@ func apiHandlerAuthen(w http.ResponseWriter, r *http.Request) {
 	// ไม่พบข้อมูล
 	printLog("INFO", "No data found for PID", pid)
 	w.WriteHeader(http.StatusNotFound)
-	json.NewEncoder(w).Encode(ErrorResponse{
-		Success: false,
-		Message: fmt.Sprintf("No data found for PID: %s", pid),
+	json.NewEncoder(w).Encode(ErrorResponseAuthen{
+		StatusAuthen:  "false",
+		StatusMessage: "ไม่พบข้อมูลการ Authen",
 	})
 }
 
@@ -137,9 +141,8 @@ func apiHandlerRealPerson(w http.ResponseWriter, r *http.Request) {
 	// ตรวจสอบว่ามีการระบุ pid หรือไม่
 	if pid == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{
-			Success: false,
-			Message: "Missing required parameter: pid",
+		json.NewEncoder(w).Encode(ErrorResponseRealPerson{
+			DataError: "Missing required parameter: pid",
 		})
 		return
 	}
@@ -154,9 +157,8 @@ func apiHandlerRealPerson(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		printLog("ERROR", "Failed to read CSV", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(ErrorResponse{
-			Success: false,
-			Message: "Error reading data source: " + err.Error(),
+		json.NewEncoder(w).Encode(ErrorResponseRealPerson{
+			DataError: "เลขประจำตัวประชาชนของผู้รับบริการ ใช้ไม่ได้ หรือไม่มี",
 		})
 		return
 	}
@@ -165,9 +167,8 @@ func apiHandlerRealPerson(w http.ResponseWriter, r *http.Request) {
 	if len(records) < 1 {
 		printLog("ERROR", "CSV is empty", nil)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(ErrorResponse{
-			Success: false,
-			Message: "Data source is empty",
+		json.NewEncoder(w).Encode(ErrorResponseRealPerson{
+			DataError: "เลขประจำตัวประชาชนของผู้รับบริการ ใช้ไม่ได้ หรือไม่มี",
 		})
 		return
 	}
@@ -190,9 +191,8 @@ func apiHandlerRealPerson(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				printLog("ERROR", "Invalid JSON in data source", err.Error())
 				w.WriteHeader(http.StatusInternalServerError)
-				json.NewEncoder(w).Encode(ErrorResponse{
-					Success: false,
-					Message: "Invalid JSON format in data source: " + err.Error(),
+				json.NewEncoder(w).Encode(ErrorResponseRealPerson{
+					DataError: "เลขประจำตัวประชาชนของผู้รับบริการ ใช้ไม่ได้ หรือไม่มี",
 				})
 				return
 			}
@@ -210,9 +210,8 @@ func apiHandlerRealPerson(w http.ResponseWriter, r *http.Request) {
 	// ไม่พบข้อมูล
 	printLog("INFO", "No data found for PID", pid)
 	w.WriteHeader(http.StatusNotFound)
-	json.NewEncoder(w).Encode(ErrorResponse{
-		Success: false,
-		Message: fmt.Sprintf("No data found for PID: %s", pid),
+	json.NewEncoder(w).Encode(ErrorResponseRealPerson{
+		DataError: "เลขประจำตัวประชาชนของผู้รับบริการ ใช้ไม่ได้ หรือไม่มี",
 	})
 }
 
@@ -232,9 +231,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	// ตรวจสอบว่าเป็น GET request
 	if r.Method != "GET" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(ErrorResponse{
-			Success: false,
-			Message: "Method not allowed. Only GET is supported.",
+		json.NewEncoder(w).Encode(ErrorResponseRealPerson{
+			DataError: "Invalid",
 		})
 		return
 	}
